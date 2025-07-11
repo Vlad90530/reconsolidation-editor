@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Firebase Editor</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+  <h1 contenteditable="true" id="title">Заголовок</h1>
+  <h3 contenteditable="true" id="author">Автор</h3>
+  <div contenteditable="true" id="content" style="border:1px solid #ccc; padding:1rem; min-height:200px">
+    Напишіть ваш текст тут...
+  </div>
+  <div style="margin-top:1rem">
+    <label>🔒 Токен для редагування:
+      <input type="password" id="editToken" placeholder="введіть токен">
+    </label>
+  </div>
+  <button onclick="saveToFirebase()">Зберегти у Firebase</button>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function saveToFirebase() {
+      const title = document.getElementById("title").innerText.trim();
+      const author = document.getElementById("author").innerText.trim();
+      const content = document.getElementById("content").innerHTML.trim();
+      const editToken = document.getElementById("editToken").value.trim();
+      const slug = title.toLowerCase().replace(/[^a-zа-я0-9]+/gi, "-").slice(0, 50);
+
+      if (!editToken) {
+        alert("❗ Введіть токен для редагування");
+        return;
+      }
+
+      const ref = db.ref("articles/" + slug);
+
+      ref.once("value", snapshot => {
+        const existing = snapshot.val();
+
+        if (existing && existing.editToken && existing.editToken !== editToken) {
+          alert("🚫 Невірний токен. Ви не можете редагувати цю статтю.");
+          return;
+        }
+
+        const article = {
+          title,
+          author,
+          content,
+          editToken,
+          date: new Date().toISOString()
+        };
+
+        ref.set(article)
+          .then(() => alert("✅ Статтю збережено у Firebase!"))
+          .catch((err) => alert("❌ Помилка: " + err.message));
+      });
+    }
+  </script>
+</body>
+</html>
